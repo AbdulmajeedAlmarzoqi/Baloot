@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="description"
+        content="لعبة البلوت الإلكترونية - منصة متكاملة للعب البلوت مع دعم كامل لقارئ الشاشة وأحدث معايير الوصول">
+    <!-- Mobile PWA & Accessibility Meta -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0f1c">
+    <title>البلوت - لعبة ورق سعودية</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Skip Navigation Links for Screen Readers -->
+    <nav class="skip-links" aria-label="روابط التخطي">
+        <a href="#player-hand" class="skip-link">انتقل إلى أوراقك</a>
+        <a href="#game-log" class="skip-link">انتقل إلى سجل اللعبة</a>
+        <a href="#score-panel" class="skip-link">انتقل إلى النتائج</a>
+    </nav>
+
+    <header role="banner">
+        <h1>البلوت</h1>
+        <div id="score-panel" role="status" aria-live="polite" aria-label="لوحة النتائج" tabindex="-1">
+            <div class="score-team" id="score-team1">
+                <span class="team-label">فريقك</span>
+                <span class="team-score" id="team1-score" aria-label="نقاط فريقك">0</span>
+            </div>
+            <div class="score-separator" aria-hidden="true">-</div>
+            <div class="score-team" id="score-team2">
+                <span class="team-label">الخصم</span>
+                <span class="team-score" id="team2-score" aria-label="نقاط الخصم">0</span>
+            </div>
+        </div>
+    </header>
+
+    <main role="main" id="game-area">
+        <!-- Welcome / New Game Screen -->
+        <section id="welcome-screen" aria-label="شاشة الترحيب">
+            <div class="welcome-content">
+                <h2>أهلاً بك في البلوت</h2>
+                <p>لعبة ورق سعودية كلاسيكية</p>
+                <button id="btn-new-game" class="btn btn-primary btn-large" aria-label="ابدأ لعبة جديدة">ابدأ
+                    اللعب</button>
+                <div class="welcome-info" aria-label="تعليمات اللعب">
+                    <h3>اختصارات لوحة المفاتيح</h3>
+                    <ul>
+                        <li><kbd>→</kbd> <kbd>←</kbd> للتنقل بين الأوراق</li>
+                        <li><kbd>Home</kbd> أول ورقة · <kbd>End</kbd> آخر ورقة</li>
+                        <li><kbd>Enter</kbd> أو <kbd>مسافة</kbd> للعب الورقة</li>
+                        <li><kbd>Alt+H</kbd> الانتقال لأوراقك</li>
+                        <li><kbd>Alt+L</kbd> الانتقال لسجل اللعبة</li>
+                        <li><kbd>Alt+S</kbd> سماع النتيجة</li>
+                        <li><kbd>Alt+G</kbd> سماع نوع اللعب</li>
+                        <li><kbd>Alt+T</kbd> سماع أوراق الطاولة</li>
+                        <li><kbd>Alt+K</kbd> لوحة الاختصارات</li>
+                        <li><kbd>Escape</kbd> إغلاق النوافذ</li>
+                    </ul>
+                    <h3>على الهاتف (VoiceOver / TalkBack)</h3>
+                    <ul>
+                        <li>اسحب يمين/يسار للتنقل بين الأوراق</li>
+                        <li>انقر مرتين للعب الورقة المحددة</li>
+                        <li>ستظهر أزرار إضافية للوصول السريع</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game Table -->
+        <section id="game-table" class="hidden" role="application" aria-label="طاولة اللعب"
+            aria-roledescription="طاولة بلوت">
+            <!-- Top Player (Partner) -->
+            <div class="player-seat player-top" id="seat-top" aria-label="شريكك">
+                <div class="player-name" id="name-top">الشريك</div>
+                <div class="player-cards-back" id="cards-top" aria-hidden="true"></div>
+            </div>
+
+            <!-- Right Player (Opponent) -->
+            <div class="player-seat player-right" id="seat-right" aria-label="الخصم الأيمن">
+                <div class="player-name" id="name-right">خصم ١</div>
+                <div class="player-cards-back" id="cards-right" aria-hidden="true"></div>
+            </div>
+
+            <!-- Left Player (Opponent) -->
+            <div class="player-seat player-left" id="seat-left" aria-label="الخصم الأيسر">
+                <div class="player-name" id="name-left">خصم ٢</div>
+                <div class="player-cards-back" id="cards-left" aria-hidden="true"></div>
+            </div>
+
+            <!-- Table Center - Played Cards -->
+            <div id="table-center" aria-label="وسط الطاولة">
+                <div id="played-cards" role="status" aria-live="polite" aria-label="الأوراق الملعوبة"></div>
+                <div id="face-up-card" class="hidden" role="status" aria-live="assertive" aria-label="الورقة المكشوفة">
+                </div>
+            </div>
+
+            <!-- Player Hand (Bottom - Human) -->
+            <div id="player-hand-area" aria-label="أوراقك">
+                <div class="player-name" id="name-bottom">أنت</div>
+                <div id="player-hand" role="listbox" aria-label="أوراقك في يدك" tabindex="0"></div>
+            </div>
+
+            <!-- Mobile Quick Actions Toolbar (touch devices only) -->
+            <div id="mobile-toolbar" class="mobile-toolbar hidden" role="toolbar" aria-label="أدوات سريعة">
+                <button class="mobile-btn" id="mob-btn-hand" aria-label="أوراقي" data-action="hand">🃏</button>
+                <button class="mobile-btn" id="mob-btn-log" aria-label="سجل اللعبة" data-action="log">📋</button>
+                <button class="mobile-btn" id="mob-btn-score" aria-label="النتيجة" data-action="score">📊</button>
+                <button class="mobile-btn" id="mob-btn-game" aria-label="نوع اللعب" data-action="game">🎯</button>
+                <button class="mobile-btn" id="mob-btn-table" aria-label="أوراق الطاولة" data-action="table">🃏</button>
+                <button class="mobile-btn" id="mob-btn-help" aria-label="المساعدة" data-action="help">❓</button>
+            </div>
+        </section>
+
+        <!-- Bidding Panel -->
+        <div id="bidding-panel" class="hidden panel-overlay" role="dialog" aria-label="الشراء" aria-modal="true">
+            <h2 id="bidding-title">اختر نوع اللعب</h2>
+            <div id="bidding-info" role="status" aria-live="polite"></div>
+            <div id="bidding-buttons" class="bidding-actions">
+                <!-- Buttons populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Hokm Suit Selection -->
+        <div id="hokm-suit-panel" class="hidden panel-overlay" role="dialog" aria-label="اختيار نوع الحكم"
+            aria-modal="true">
+            <h2>اختر نوع الحكم</h2>
+            <div id="hokm-suit-buttons" class="suit-actions">
+                <!-- Suit buttons populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Projects Display -->
+        <div id="projects-panel" class="hidden panel-overlay" role="dialog" aria-label="المشاريع" aria-modal="true">
+            <h2>المشاريع</h2>
+            <div id="projects-content" role="status" aria-live="polite"></div>
+            <button id="btn-close-projects" class="btn btn-primary" aria-label="متابعة اللعب">متابعة</button>
+        </div>
+
+        <!-- Double Panel -->
+        <div id="double-panel" class="hidden panel-overlay" role="dialog" aria-label="الدبل" aria-modal="true">
+            <h2 id="double-title">الدبل</h2>
+            <div id="double-info" role="status" aria-live="polite"></div>
+            <div id="double-buttons" class="bidding-actions"></div>
+        </div>
+
+        <!-- Round Result -->
+        <div id="round-result" class="hidden panel-overlay" role="dialog" aria-label="نتيجة الجولة" aria-modal="true">
+            <h2>نتيجة الجولة</h2>
+            <div id="round-result-content" role="status" aria-live="polite"></div>
+            <button id="btn-next-round" class="btn btn-primary" aria-label="الجولة التالية">الجولة التالية</button>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="hidden panel-overlay" role="alertdialog" aria-label="انتهاء اللعبة"
+            aria-modal="true">
+            <h2 id="game-over-title"></h2>
+            <div id="game-over-content"></div>
+            <button id="btn-play-again" class="btn btn-primary btn-large" aria-label="العب مرة أخرى">العب مرة
+                أخرى</button>
+        </div>
+
+        <!-- Shortcuts Help Panel -->
+        <div id="shortcuts-panel" class="hidden panel-overlay" role="dialog" aria-label="اختصارات لوحة المفاتيح"
+            aria-modal="true">
+            <h2>اختصارات لوحة المفاتيح</h2>
+            <div class="shortcuts-grid" role="list">
+                <div class="shortcut-row" role="listitem">
+                    <kbd>← →</kbd><span>التنقل بين الأوراق</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Home</kbd><span>أول ورقة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>End</kbd><span>آخر ورقة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Enter / مسافة</kbd><span>لعب الورقة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Alt+H</kbd><span>الانتقال لأوراقك</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Alt+L</kbd><span>سجل اللعبة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Alt+S</kbd><span>سماع النتيجة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Alt+G</kbd><span>نوع اللعب الحالي</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Alt+T</kbd><span>أوراق الطاولة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Alt+K</kbd><span>فتح/إغلاق هذه اللوحة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <kbd>Escape</kbd><span>إغلاق النوافذ</span>
+                </div>
+            </div>
+            <button id="btn-close-shortcuts" class="btn btn-secondary" aria-label="إغلاق لوحة الاختصارات">إغلاق</button>
+        </div>
+    </main>
+
+    <!-- Game Log (Interactive - navigable with keyboard) -->
+    <aside id="game-log" aria-label="سجل أحداث اللعبة" tabindex="-1">
+        <h2 id="game-log-heading">سجل اللعبة</h2>
+        <div id="log-entries" role="listbox" aria-labelledby="game-log-heading" aria-live="polite"
+            aria-relevant="additions" tabindex="0"></div>
+    </aside>
+
+    <!-- Live Region for Immediate Announcements -->
+    <div id="sr-announce" role="status" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
+
+    <!-- Polite Live Region for supplementary announcements -->
+    <div id="sr-announce-polite" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+    <footer role="contentinfo">
+        <p>البلوت - لعبة ورق سعودية | جميع الحقوق محفوظة ٢٠٢٦</p>
+    </footer>
+
+    <script src="js/cards.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/accessibility.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
