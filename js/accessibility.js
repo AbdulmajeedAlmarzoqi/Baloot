@@ -2,7 +2,8 @@
    accessibility.js - Screen Reader & Keyboard Support
    WCAG 2.2 Compliant Accessibility Layer
    Enhanced with: Interactive Log, Keyboard Shortcuts,
-   Device Detection, Mobile Screen Reader Support
+   Device Detection, Mobile Screen Reader Support,
+   Device-Adaptive Help Modal
    ============================================ */
 
 /* ---- Device Detection ---- */
@@ -26,8 +27,6 @@ class DeviceDetector {
             (this._isTouchDevice && window.innerWidth <= 1024);
 
         // Screen reader heuristic (best effort)
-        // VoiceOver: iOS Safari with accessibility set
-        // TalkBack: Android Chrome
         this._screenReader = 'unknown';
         if (/iPhone|iPad|iPod/.test(ua)) {
             this._screenReader = 'voiceover';
@@ -81,7 +80,6 @@ class KeyboardShortcutManager {
         document.addEventListener('keydown', (e) => {
             if (!this._enabled) return;
 
-            // Build the shortcut ID from the event
             let modifier = '';
             if (e.altKey) modifier = 'alt';
             else if (e.ctrlKey) modifier = 'ctrl';
@@ -103,9 +101,8 @@ class KeyboardShortcutManager {
 
 /* ---- Interactive Game Log (WAI-ARIA APG Listbox) ---- */
 class InteractiveGameLog {
-    constructor(logEntriesEl, announcer) {
+    constructor(logEntriesEl) {
         this.container = logEntriesEl;
-        this.announcer = announcer;
         this.entries = [];
         this.focusedIndex = -1;
         this._setupKeyboard();
@@ -116,7 +113,7 @@ class InteractiveGameLog {
         entry.className = 'log-entry';
         entry.setAttribute('role', 'option');
         entry.setAttribute('tabindex', '-1');
-        entry.setAttribute('aria-label', message);
+        // Only set textContent; screen reader reads it on focus
         entry.textContent = message;
 
         this.entries.push(entry);
@@ -143,7 +140,6 @@ class InteractiveGameLog {
 
     focus() {
         if (this.entries.length === 0) return;
-        // Focus last entry
         this.focusedIndex = this.entries.length - 1;
         this._updateRovingTabindex();
         this.entries[this.focusedIndex].focus();
@@ -214,7 +210,7 @@ class InteractiveGameLog {
         this._updateRovingTabindex();
         if (this.entries[this.focusedIndex]) {
             this.entries[this.focusedIndex].focus();
-            // Announce position for screen reader
+            // Set aria-label with position context only when navigating
             const pos = this.focusedIndex + 1;
             const total = this.entries.length;
             this.entries[this.focusedIndex].setAttribute('aria-label',
@@ -229,7 +225,7 @@ class InteractiveGameLog {
     }
 }
 
-/* ---- Accessibility Manager (Upgraded) ---- */
+/* ---- Accessibility Manager (WCAG 2.2 Overhaul) ---- */
 class AccessibilityManager {
     constructor() {
         this.announceEl = document.getElementById('sr-announce');
@@ -241,8 +237,8 @@ class AccessibilityManager {
         // Device detection
         this.device = new DeviceDetector();
 
-        // Interactive log
-        this.gameLog = new InteractiveGameLog(this.logEntriesEl, this);
+        // Interactive log (no announcer reference — log is silent, announce is separate)
+        this.gameLog = new InteractiveGameLog(this.logEntriesEl);
 
         // Keyboard shortcuts
         this.shortcuts = new KeyboardShortcutManager();
@@ -251,9 +247,47 @@ class AccessibilityManager {
         if (this.device.isMobile || this.device.isTouchDevice) {
             this._showMobileToolbar();
         }
+
+        // Setup device-adaptive help modal content
+        this._setupAdaptiveModal();
+    }
+
+    /* ---- Device-Adaptive Help Modal ---- */
+
+    _setupAdaptiveModal() {
+        const title = document.getElementById('shortcuts-modal-title');
+        const keyboardSection = document.getElementById('shortcuts-keyboard');
+        const touchSection = document.getElementById('shortcuts-touch');
+        const btnIcon = document.getElementById('btn-shortcuts-icon');
+        const btnLabel = document.getElementById('btn-shortcuts-label');
+        const btn = document.getElementById('btn-shortcuts-top');
+
+        if (this.device.isMobile || this.device.isTouchDevice) {
+            // Mobile/Touch device: show touch gestures
+            if (title) title.textContent = 'إيماءات اللمس';
+            if (keyboardSection) keyboardSection.classList.add('hidden');
+            if (touchSection) touchSection.classList.remove('hidden');
+            if (btnIcon) btnIcon.textContent = '👆';
+            if (btnLabel) btnLabel.textContent = 'عرض إيماءات اللمس';
+            if (btn) btn.setAttribute('aria-label', 'عرض إيماءات اللمس');
+        } else {
+            // Desktop: show keyboard shortcuts
+            if (title) title.textContent = 'اختصارات لوحة المفاتيح';
+            if (keyboardSection) keyboardSection.classList.remove('hidden');
+            if (touchSection) touchSection.classList.add('hidden');
+            if (btnIcon) btnIcon.textContent = '⌨️';
+            if (btnLabel) btnLabel.textContent = 'اختصارات لوحة المفاتيح (?)';
+            if (btn) btn.setAttribute('aria-label', 'عرض اختصارات لوحة المفاتيح');
+        }
     }
 
     /* ---- Announcements ---- */
+    /*
+     * WCAG fix: Only ONE announcement channel used at a time.
+     * announce() => assertive (immediate, for important events)
+     * log()      => silent add to log history (no aria-live on log container)
+     * announceAndLog() = announce + log WITHOUT double reading
+     */
 
     announce(message, delay = 100) {
         this.announceQueue.push({ message, delay, priority: 'assertive' });
@@ -261,7 +295,7 @@ class AccessibilityManager {
     }
 
     announcePolite(message) {
-        // Non-interrupting announcement
+        // Non-interrupting announcement for supplementary info
         if (this.announcePoliteEl) {
             this.announcePoliteEl.textContent = '';
             setTimeout(() => { this.announcePoliteEl.textContent = message; }, 50);
@@ -287,10 +321,12 @@ class AccessibilityManager {
     /* ---- Game Log ---- */
 
     log(message) {
+        // Silently adds to log history (no screen reader repeat)
         this.gameLog.addEntry(message);
     }
 
     announceAndLog(message, delay = 100) {
+        // Announce to screen reader (assertive, once) AND add to silent log
         this.announce(message, delay);
         this.log(message);
     }
@@ -357,6 +393,27 @@ class AccessibilityManager {
         }
     }
 
+    /**
+     * After an AI plays or a card is removed, refocus the next available card
+     * so the screen reader user doesn't lose their place.
+     */
+    refocusNextCard() {
+        const hand = document.getElementById('player-hand');
+        if (!hand) return;
+        // Find the currently focused card, or the first focusable card
+        const current = hand.querySelector('.card[tabindex="0"]');
+        if (current) {
+            current.focus();
+            return;
+        }
+        // Fallback: focus first available card
+        const first = hand.querySelector('.card:not(.disabled)') || hand.querySelector('.card');
+        if (first) {
+            first.setAttribute('tabindex', '0');
+            first.focus();
+        }
+    }
+
     /* ---- Card / Hand Descriptions ---- */
 
     describeCard(card) {
@@ -373,16 +430,17 @@ class AccessibilityManager {
     announceTurn(playerName, isHuman) {
         if (isHuman) {
             this.announce('دورك. اختر ورقة للعب.');
-        } else {
-            this.log(`دور ${playerName}`);
         }
+        // AI turns: don't announce "دور خصم" to avoid noise; just log silently
     }
 
     announceCardPlayed(playerName, card, isHuman) {
         const msg = `${playerName} لعب ${card.nameAr}`;
         if (isHuman) {
+            // Human played: just log (they know what they played)
             this.log(msg);
         } else {
+            // AI played: announce once via assertive + silent log
             this.announceAndLog(msg, 200);
         }
     }
@@ -451,3 +509,4 @@ class AccessibilityManager {
         this.announceQueue = [];
     }
 }
+  

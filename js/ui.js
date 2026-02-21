@@ -15,6 +15,7 @@ class GameUI {
         this.animationSpeed = 400;
         this.cacheElements();
         this._setupPanelEscapeHandlers();
+        this._bindShortcutClose();
     }
 
     cacheElements() {
@@ -113,6 +114,25 @@ class GameUI {
     hideAllPanels() {
         for (const panel of this._allPanels) {
             if (panel) this.hidePanel(panel);
+        }
+    }
+
+    toggleShortcutsPanel() {
+        if (this.shortcutsPanel.classList.contains('hidden')) {
+            this.hideAllPanels();
+            this.showPanel(this.shortcutsPanel);
+        } else {
+            this.hidePanel(this.shortcutsPanel);
+        }
+    }
+
+    _bindShortcutClose() {
+        const closeBtn = document.getElementById('btn-close-shortcuts');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.hidePanel(this.shortcutsPanel);
+                this.a11y.focusHand();
+            });
         }
     }
 
@@ -226,8 +246,7 @@ class GameUI {
                 if (cardEls[currentIdx]) cardEls[currentIdx].setAttribute('tabindex', '-1');
                 cardEls[newIdx].setAttribute('tabindex', '0');
                 cardEls[newIdx].focus();
-                // Announce position
-                this.a11y.announcePolite(`ورقة ${newIdx + 1} من ${len}`);
+                // Screen reader naturally reads the aria-label which includes the pos
             };
 
             switch (e.key) {

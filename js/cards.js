@@ -4,20 +4,20 @@
 
 const SUITS = {
     diamonds: { id: 'diamonds', nameAr: 'الديمن', symbol: '♦', color: 'red', cssClass: 'suit-diamonds' },
-    hearts:   { id: 'hearts',   nameAr: 'الهاص',  symbol: '♥', color: 'red', cssClass: 'suit-hearts' },
-    spades:   { id: 'spades',   nameAr: 'السبيت', symbol: '♠', color: 'black', cssClass: 'suit-spades' },
-    clubs:    { id: 'clubs',    nameAr: 'الشيريا', symbol: '♣', color: 'black', cssClass: 'suit-clubs' }
+    hearts: { id: 'hearts', nameAr: 'الهاص', symbol: '♥', color: 'red', cssClass: 'suit-hearts' },
+    spades: { id: 'spades', nameAr: 'السبيت', symbol: '♠', color: 'black', cssClass: 'suit-spades' },
+    clubs: { id: 'clubs', nameAr: 'الشيريا', symbol: '♣', color: 'black', cssClass: 'suit-clubs' }
 };
 
 const RANKS = {
-    '7':  { id: '7',  nameAr: 'سبعة',  symbol: '7',  display: '٧' },
-    '8':  { id: '8',  nameAr: 'ثمانية', symbol: '8',  display: '٨' },
-    '9':  { id: '9',  nameAr: 'تسعة',  symbol: '9',  display: '٩' },
-    '10': { id: '10', nameAr: 'عشرة',  symbol: '10', display: '١٠' },
-    'J':  { id: 'J',  nameAr: 'ولد',   symbol: 'J',  display: 'J' },
-    'Q':  { id: 'Q',  nameAr: 'بنت',   symbol: 'Q',  display: 'Q' },
-    'K':  { id: 'K',  nameAr: 'شايب',  symbol: 'K',  display: 'K' },
-    'A':  { id: 'A',  nameAr: 'إكة',   symbol: 'A',  display: 'A' }
+    '7': { id: '7', nameAr: 'سبعة', symbol: '7', display: '٧' },
+    '8': { id: '8', nameAr: 'ثمانية', symbol: '8', display: '٨' },
+    '9': { id: '9', nameAr: 'تسعة', symbol: '9', display: '٩' },
+    '10': { id: '10', nameAr: 'عشرة', symbol: '10', display: '١٠' },
+    'J': { id: 'J', nameAr: 'ولد', symbol: 'J', display: 'J' },
+    'Q': { id: 'Q', nameAr: 'بنت', symbol: 'Q', display: 'Q' },
+    'K': { id: 'K', nameAr: 'شايب', symbol: 'K', display: 'K' },
+    'A': { id: 'A', nameAr: 'إكة', symbol: 'A', display: 'A' }
 };
 
 // Sun (صن) ordering: A > 10 > K > Q > J > 9 > 8 > 7
@@ -162,21 +162,68 @@ function sortHand(cards) {
 }
 
 /**
- * Get valid cards that can be played given the lead suit and game type
+ * Get valid cards that can be played given the trick context
  */
-function getValidCards(hand, leadSuit, gameType, hokmSuit) {
-    if (!leadSuit) {
+function getValidCards(hand, currentTrick, gameType, hokmSuit, playerIndex) {
+    if (!currentTrick || currentTrick.length === 0) {
         // First player can play anything
         return hand;
     }
 
-    // Must follow lead suit if possible
+    const leadSuit = currentTrick[0].card.suitId;
     const sameSuitCards = hand.filter(c => c.suitId === leadSuit);
+
+    // 1. Must follow lead suit if possible
     if (sameSuitCards.length > 0) {
-        return sameSuitCards;
+        // Overtrumping rule (الإكبار): if lead is trump, must play higher trump if possible
+        if (gameType === 'hokm' && leadSuit === hokmSuit) {
+            const currentWinner = determineTrickWinner(currentTrick, gameType, hokmSuit);
+            const winnerStrength = getCardStrength(currentWinner.card, gameType, hokmSuit, leadSuit);
+            const higherTrumps = sameSuitCards.filter(c =>
+                getCardStrength(c, gameType, hokmSuit, leadSuit) > winnerStrength
+            );
+
+            if (higherTrumps.length > 0) {
+                return higherTrumps; // Forced to overtrump
+            }
+        }
+        return sameSuitCards; // Forced to follow suit
     }
 
-    // In hokm, if can't follow suit, can play trump or any card
-    // In sun, if can't follow suit, can play anything
+    // 2. Cannot follow suit
+    if (gameType === 'hokm') {
+        const partnerIndex = (playerIndex + 2) % 4;
+        const currentWinner = determineTrickWinner(currentTrick, gameType, hokmSuit);
+        const isPartnerWinning = currentWinner.playerIndex === partnerIndex;
+
+        if (!isPartnerWinning) {
+            // Opponent is winning
+            const trumpCards = hand.filter(c => c.suitId === hokmSuit);
+
+            if (trumpCards.length > 0) {
+                const winnerCard = currentWinner.card;
+
+                // If opponent already trumped, check if we can overtrump
+                if (winnerCard.suitId === hokmSuit) {
+                    const winnerStrength = getCardStrength(winnerCard, gameType, hokmSuit, leadSuit);
+                    const higherTrumps = trumpCards.filter(c =>
+                        getCardStrength(c, gameType, hokmSuit, leadSuit) > winnerStrength
+                    );
+
+                    if (higherTrumps.length > 0) {
+                        return higherTrumps; // Forced to overtrump
+                    } else {
+                        // Cannot overtrump, not forced to throw low trump under high trump
+                        return hand;
+                    }
+                } else {
+                    // Opponent winning with normal suit (lead suit). Must trump to win.
+                    return trumpCards;
+                }
+            }
+        }
+    }
+
+    // In Sun, or if partner is winning, or if don't have trump, can play anything
     return hand;
 }

@@ -29,6 +29,12 @@
 
     <header role="banner">
         <h1>البلوت</h1>
+        <!-- Device-Adaptive Help Button (label set by JS in accessibility.js) -->
+        <button id="btn-shortcuts-top" class="btn btn-secondary btn-small" aria-label="عرض اختصارات لوحة المفاتيح"
+            title="عرض المساعدة" style="margin: 0 10px;">
+            <span id="btn-shortcuts-icon" aria-hidden="true">⌨️</span>
+            <span id="btn-shortcuts-label">اختصارات لوحة المفاتيح (?)</span>
+        </button>
         <div id="score-panel" role="status" aria-live="polite" aria-label="لوحة النتائج" tabindex="-1">
             <div class="score-team" id="score-team1">
                 <span class="team-label">فريقك</span>
@@ -53,6 +59,7 @@
                 <div class="welcome-info" aria-label="تعليمات اللعب">
                     <h3>اختصارات لوحة المفاتيح</h3>
                     <ul>
+                        <li><kbd>?</kbd> عرض اختصارات لوحة المفاتيح والإيماءات</li>
                         <li><kbd>→</kbd> <kbd>←</kbd> للتنقل بين الأوراق</li>
                         <li><kbd>Home</kbd> أول ورقة · <kbd>End</kbd> آخر ورقة</li>
                         <li><kbd>Enter</kbd> أو <kbd>مسافة</kbd> للعب الورقة</li>
@@ -167,11 +174,16 @@
                 أخرى</button>
         </div>
 
-        <!-- Shortcuts Help Panel -->
-        <div id="shortcuts-panel" class="hidden panel-overlay" role="dialog" aria-label="اختصارات لوحة المفاتيح"
+        <!-- Device-Adaptive Help Modal -->
+        <div id="shortcuts-panel" class="hidden panel-overlay" role="dialog" aria-labelledby="shortcuts-modal-title"
             aria-modal="true">
-            <h2>اختصارات لوحة المفاتيح</h2>
-            <div class="shortcuts-grid" role="list">
+            <h2 id="shortcuts-modal-title">اختصارات لوحة المفاتيح</h2>
+
+            <!-- Desktop: Keyboard Shortcuts -->
+            <div id="shortcuts-keyboard" class="shortcuts-grid" role="list">
+                <div class="shortcut-row" role="listitem">
+                    <kbd>?</kbd><span>عرض هذه اللوحة</span>
+                </div>
                 <div class="shortcut-row" role="listitem">
                     <kbd>← →</kbd><span>التنقل بين الأوراق</span>
                 </div>
@@ -200,21 +212,52 @@
                     <kbd>Alt+T</kbd><span>أوراق الطاولة</span>
                 </div>
                 <div class="shortcut-row" role="listitem">
-                    <kbd>Alt+K</kbd><span>فتح/إغلاق هذه اللوحة</span>
-                </div>
-                <div class="shortcut-row" role="listitem">
                     <kbd>Escape</kbd><span>إغلاق النوافذ</span>
                 </div>
             </div>
-            <button id="btn-close-shortcuts" class="btn btn-secondary" aria-label="إغلاق لوحة الاختصارات">إغلاق</button>
+
+            <!-- Mobile: Touch Gestures -->
+            <div id="shortcuts-touch" class="shortcuts-grid hidden" role="list">
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">👆</span><span>انقر مرة واحدة لتحديد الورقة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">👆👆</span><span>انقر مرتين للعب الورقة (مع
+                        VoiceOver/TalkBack)</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">👈</span><span>اسحب يمينًا للورقة التالية</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">👉</span><span>اسحب يسارًا للورقة السابقة</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">📋</span><span>زر سجل اللعبة في شريط الأدوات
+                        السفلي</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">📊</span><span>زر النتيجة في شريط الأدوات
+                        السفلي</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">🎯</span><span>زر نوع اللعب في شريط الأدوات
+                        السفلي</span>
+                </div>
+                <div class="shortcut-row" role="listitem">
+                    <span class="gesture-icon" aria-hidden="true">🃏</span><span>زر أوراق الطاولة في شريط الأدوات
+                        السفلي</span>
+                </div>
+            </div>
+
+            <button id="btn-close-shortcuts" class="btn btn-secondary" aria-label="إغلاق">إغلاق</button>
         </div>
     </main>
 
     <!-- Game Log (Interactive - navigable with keyboard) -->
     <aside id="game-log" aria-label="سجل أحداث اللعبة" tabindex="-1">
         <h2 id="game-log-heading">سجل اللعبة</h2>
-        <div id="log-entries" role="listbox" aria-labelledby="game-log-heading" aria-live="polite"
-            aria-relevant="additions" tabindex="0"></div>
+        <!-- Removed aria-live="polite" to avoid repeating log events when announcer says them -->
+        <div id="log-entries" role="listbox" aria-labelledby="game-log-heading" tabindex="0"></div>
     </aside>
 
     <!-- Live Region for Immediate Announcements -->

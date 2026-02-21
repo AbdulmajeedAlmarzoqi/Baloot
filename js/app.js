@@ -50,6 +50,19 @@ class BalootApp {
     setupKeyboardShortcuts() {
         const sm = this.a11y.shortcuts;
 
+        // ? → Show shortcuts panel
+        sm.register('?', '', () => {
+            this.ui.showPanel(this.ui.shortcutsPanel);
+        }, 'عرض اختصارات لوحة المفاتيح والإيماءات');
+
+        // Bind the header shortcuts button
+        const topShortcutsBtn = document.getElementById('btn-shortcuts-top');
+        if (topShortcutsBtn) {
+            topShortcutsBtn.addEventListener('click', () => {
+                this.ui.showPanel(this.ui.shortcutsPanel);
+            });
+        }
+
         // Alt+H → Focus player hand
         sm.register('h', 'alt', () => {
             this.a11y.focusHand();
@@ -132,6 +145,9 @@ class BalootApp {
         this.ui.removeGameTypeBadge();
         this.ui.clearPlayedCards();
         this.game.startNewRound();
+
+        // Reset AI memory for the new round
+        BalootAI.resetMemory();
 
         this.a11y.announceDealing();
 
@@ -303,6 +319,9 @@ class BalootApp {
             }
         }
 
+        // Track card in AI memory (before it's removed from hand)
+        BalootAI.recordCardPlayed(card, playerIndex, this.game.currentTrick, this.game.gameType, this.game.hokmSuit);
+
         this.a11y.announceCardPlayed(PLAYER_NAMES[playerIndex], card, playerIndex === 0);
 
         const seat = PLAYER_SEATS[playerIndex];
@@ -319,16 +338,24 @@ class BalootApp {
         if (result.action === 'next_player') {
             if (playerIndex === 0) {
                 this.ui.renderHand(this.game.hands[0], null, false);
+                // Recover screen reader focus after hand re-render
+                this.a11y.refocusNextCard();
             }
             await this.delay(300);
             this.processTurn();
         } else if (result.action === 'trick_complete') {
             this.game.lastTrickWinnerTeam = getTeam(result.winner);
 
+            // Record trick result in AI memory
+            const trickPts = calculateTrickPoints(result.cards, this.game.gameType, this.game.hokmSuit);
+            BalootAI.recordTrickResult(getTeam(result.winner), trickPts);
+
             this.a11y.announceTrickWinner(PLAYER_NAMES[result.winner], result.trickNumber);
 
             if (playerIndex === 0) {
                 this.ui.renderHand(this.game.hands[0], null, false);
+                // Recover screen reader focus after hand re-render
+                this.a11y.refocusNextCard();
             }
 
             await this.delay(1200);

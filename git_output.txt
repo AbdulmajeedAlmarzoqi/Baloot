@@ -1,0 +1,1 @@
+094ec02 Baloot card game with full WCAG 2.2 accessibility

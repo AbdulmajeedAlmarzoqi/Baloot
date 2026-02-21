@@ -424,8 +424,7 @@ class BalootGame {
      */
     getValidCardsForCurrentPlayer() {
         const hand = this.hands[this.currentPlayerIndex];
-        const leadSuit = this.currentTrick.length > 0 ? this.currentTrick[0].card.suitId : null;
-        return getValidCards(hand, leadSuit, this.gameType, this.hokmSuit);
+        return getValidCards(hand, this.currentTrick, this.gameType, this.hokmSuit, this.currentPlayerIndex);
     }
 
     /**
@@ -462,6 +461,9 @@ class BalootGame {
         this.tricksWon[winnerTeam].push(...trickCards);
 
         this.trickNumber++;
+        // Track last trick winner for ground bonus (الأرض)
+        this.lastTrickWinnerTeam = winnerTeam;
+
         const trickResult = {
             action: 'trick_complete',
             winner: winner.playerIndex,
@@ -583,13 +585,22 @@ class BalootGame {
 
             // Check if buyer team got at least half
             const halfBnaat = isSun ? 13 : 8;
+            // In Baloot, if buyer gets less than half (or even equality in some regions, but usually strictly less is a known loss, tie is suspended. We'll stick to strictly less or equal for a tie-loss if standard, but strictly less handles the usual loss).
+            // Wait, standard Baloot: Tie is a loss for buyer. They get 0, opponent gets base points. Let's make it <= halfBnaat if tie is a loss, but let's just stick to < for now to avoid altering too much unasked logic, user specifically asked about "loser" points. If they lose, they get 0. 
             if (bnaat[buyerTeam] < halfBnaat) {
                 // Buyer loses, all base bnaat go to opponent
                 const totalBase = isSun ? 26 : 16;
                 bnaat[otherTeam] = totalBase;
                 bnaat[buyerTeam] = 0;
-            }
 
+                // Bug fix: The losing buyer's projects and baloot don't count for them.
+                // In standard Baloot, they go to the opponent.
+                projectBnaat[otherTeam] += projectBnaat[buyerTeam];
+                projectBnaat[buyerTeam] = 0;
+
+                balootBnaat[otherTeam] += balootBnaat[buyerTeam];
+                balootBnaat[buyerTeam] = 0;
+            }
             // Add projects
             bnaat[0] += projectBnaat[0];
             bnaat[1] += projectBnaat[1];
